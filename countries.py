@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 from osgeo import ogr
+import pandas as pd
 
 class Point(object):
     """ Wrapper for ogr point """
@@ -35,6 +37,7 @@ class CountryChecker(object):
     def __init__(self, country_file):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         self.countryFile = driver.Open(country_file)
+        self.iso_to_id_dict = pd.read_csv(os.path.join(country_file, 'iso_to_id.csv'))
         self.layer = self.countryFile.GetLayer()
     
     def getCountry(self, point):
@@ -47,6 +50,18 @@ class CountryChecker(object):
             country = self.layer.GetFeature(i)
             if country.geometry().Contains(point.ogr):
                 return Country(country)
-        
+
         # nothing found
         return None
+
+    def coord_in_countries(self, point, allowed_iso_codes):
+        """
+
+        """
+        iso_to_id_dict = dict(zip(self.iso_to_id_dict.ISO, self.iso_to_id_dict.ID))
+        for iso in allowed_iso_codes:
+            country_ix = iso_to_id_dict[iso]
+            country_feature = self.layer.GetFeature(country_ix)
+            if country_feature.geometry().Contains(point.ogr):
+                return iso
+        return ''
